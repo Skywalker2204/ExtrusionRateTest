@@ -1,21 +1,11 @@
 
-import sys
-import glob
-import serial.tools.list_ports as ports
+from Extrusiontest_GUI import RootGUI, ComGUI
+from Serial_Com_ctrl import SerialCtrl
 
-import time
+RootMaster = RootGUI()
+MySerial = SerialCtrl()
 
-def get_serial_ports():
-        com_ports=list(ports.comports())
-        return com_ports
+ComMaster = ComGUI(RootMaster.root, MySerial)
 
-def sendGcode(code, ser):
-    for line in code.split('\n'):
-        ser.write(line)
-        time.sleep(1)
-        
-if __name__ == '__main__':
-    for i in get_serial_ports():
-        print(i.device)
-        
+RootMaster.root.mainloop()
             
