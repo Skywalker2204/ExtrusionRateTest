@@ -209,14 +209,19 @@ class ConnGUI():
         self.dataFrame=tk.Frame(self.dataCanvas, bg='white')
         self.dataCanvas.create_window((10,0), window=self.dataFrame,
                                       anchor='nw')
+    def updateLog(self):
+        text=self.serial.checkSerialPort()
+        tk.Label(self.dataFrame, text=text, font=('Calibri',
+                                                 '13'), bg='white').pack()
+        
         
         
     def SetTemperature(self):
-        code = 'M104 S{}'.format(self.temp.get())
+        code = 'M104 S{}\n'.format(self.temp.get())
         if DEBUG:
             print(code)
         else:
-            self.serial.ser.write(code)
+            self.serial.ser.write(bytes(code, 'utf-8'))
         time.sleep(1)
         if 'red' in self.bnt_temp['bg']:
             self.bnt_temp.configure(bg='green')
@@ -227,19 +232,19 @@ class ConnGUI():
     
     def Extrusion(self):
         speed = int(self.ext_speed.get())/(1.75*1.75)*240
-        code = 'G1 E{} F{}'.format(self.ext_len.get(), int(speed))
+        code = 'G1 E{} F{}\n'.format(self.ext_len.get(), int(speed))
         if DEBUG:
             print(code)
         else:
-            self.serial.ser.write(code)
+            self.serial.ser.write(bytes(code, 'utf-8'))
         time.sleep(1)
 
     def sendGcode(self):
-        code= self.Gcode.get()
+        code= self.Gcode.get()+'\n'
         if DEBUG:
             print(code)
         else:
-            self.serial.ser.write(code)
+            self.serial.ser.write(bytes(code, 'utf-8'))
         time.sleep(1)
         self.Gcode.set('')
         

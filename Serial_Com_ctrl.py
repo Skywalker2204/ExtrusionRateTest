@@ -64,7 +64,7 @@ class SerialCtrl():
                 recentPacket=self.ser.readline()
             else:
                 recentPacket=''
-            return recentPacket 
+            return recentPacket.decode('utf-8').rstrip('\n') 
         except:
             pass
                    
