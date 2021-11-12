@@ -126,57 +126,123 @@ class ConnGUI():
                                     bg='white', anchor="w", width=15)
         self.label_ext = tk.Label(self.frame, text='Extrusion:', 
                                     bg='white', anchor ="w", width=15)
-        
-        self.label_isttemp = tk.Label(self.frame, text="--", 
+        self.istemp = tk.StringVar()
+        self.istemp.set("--")
+        self.label_isttemp = tk.Label(self.frame, text=self.istemp.get(), 
                                     bg='white', fg='red', width=10)
         self.label_ext_len = tk.Label(self.frame, text='Length', 
                                     bg='white', width=10)
         self.label_ext_speed = tk.Label(self.frame, text='Volume Flow Rate', 
                                     bg='white', width=15)
         
-        self.entry_temp = tk.Entry(self.frame, bd=5, width= 15)
-        self.entry_ext_len = tk.Entry(self.frame, bd=5, width=10)
-        self.entry_ext_speed = tk.Entry(self.frame, bd=5, width=15)
+        self.label_Gcode = tk.Label(self.frame, text='GCode:', 
+                                    bg='white', width=15, anchor="w")
         
-        self.bnt_temp = tk.Button(self.frame, text="OFF", width=2, 
+        self.temp = tk.StringVar()
+        self.ext_len = tk.StringVar()
+        self.ext_speed = tk.StringVar()
+        self.Gcode = tk.StringVar()
+        
+        self.entry_temp = tk.Entry(self.frame, textvariable=self.temp, 
+                                   bd=1, width= 5)
+        self.entry_ext_len = tk.Entry(self.frame, textvariable=self.ext_len,
+                                      bd=1, width=5)
+        self.entry_ext_speed = tk.Entry(self.frame, textvariable=self.ext_speed,
+                                        bd=1, width=5)
+        self.entry_Gcode = tk.Entry(self.frame, textvariable=self.Gcode,
+                                    bd=2, width = 25)
+        
+        self.bnt_temp = tk.Button(self.frame, text="ON", width=2, 
                                      command=self.SetTemperature, 
                                      bg='red')
         self.bnt_ext = tk.Button(self.frame, text="GO", 
                                      width=2, command=self.Extrusion)
         
+        self.bnt_Gcode = tk.Button(self.frame, text="Send", 
+                                     width=2, command=self.sendGcode)
+        
+        self.logWindow(root)
+        
         self.ConnGUIOpen()
         self.setDefalut()
+        
         pass
     
     def ConnGUIOpen(self):
-        self.root.geometry('800x120')
-        self.frame.grid(row=0, column=4, rowspan=4, columnspan=5, 
+        self.root.geometry('800x240')
+        self.frame.grid(row=0, column=4, rowspan=3, columnspan=5, 
                         padx=5, pady=5)
         
-        self.label_temp.grid(row=0, column=0)
-        self.label_ext.grid(row=1, column=0, rowspan = 2)
+        self.label_Gcode.grid(row=0, column=0)
+        self.entry_Gcode.grid(row=0, column=1, columnspan=2)
         
-        self.label_isttemp.grid(row=0, column=1)
-        self.label_ext_len.grid(row=1, column=1)
-        self.label_ext_speed.grid(row=1, column=2)
+        self.label_temp.grid(row=1, column=0)
+        self.label_ext.grid(row=2, column=0, rowspan = 2)
         
-        self.entry_temp.grid(row=0, column=2)
-        self.entry_ext_len.grid(row=2, column=1)
-        self.entry_ext_speed.grid(row=2, column=2)
+        self.label_isttemp.grid(row=1, column=1)
+        self.label_ext_len.grid(row=2, column=1)
+        self.label_ext_speed.grid(row=2, column=2)
         
-        self.bnt_temp.grid(row=0, column=3)
-        self.bnt_ext.grid(row=2, column=3)
+        self.entry_temp.grid(row=1, column=2)
+        self.entry_ext_len.grid(row=3, column=1)
+        self.entry_ext_speed.grid(row=3, column=2)
+        
+        self.bnt_Gcode.grid(row=0, column=3)
+        self.bnt_temp.grid(row=1, column=3)
+        self.bnt_ext.grid(row=3, column=3)
+        
+        self.dataCanvas.grid(row=4, column=0, columnspan=7, rowspan=5)
+        self.vsb.grid(row=4, column=8, rowspan=5, sticky='NS')
         
     def setDefalut(self):
-        self.entry_ext_speed.insert(-1, '1000')
+        self.entry_ext_speed.insert(-1, '20')
         self.entry_ext_len.insert(-1, '100')
         self.entry_temp.insert(-1, '200')
         
+    
+    def logWindow(self, root):
+        self.dataCanvas = tk.Canvas(root, width = 800, heigh=60, bg='white')
+        self.vsb = tk.Scrollbar(root, orient='vertical', 
+                                command=self.dataCanvas.yview)
+        self.dataCanvas.config(yscrollcommand=self.vsb.set)
+        
+        self.dataFrame=tk.Frame(self.dataCanvas, bg='white')
+        self.dataCanvas.create_window((10,0), window=self.dataFrame,
+                                      anchor='nw')
+        
+        
     def SetTemperature(self):
+        code = 'M104 S{}'.format(self.temp.get())
+        if DEBUG:
+            print(code)
+        else:
+            self.serial.ser.write(code)
+        time.sleep(1)
+        if 'red' in self.bnt_temp['bg']:
+            self.bnt_temp.configure(bg='green')
+        else:
+            self.bnt_temp.configure(bg='red')
+        pass
         pass
     
     def Extrusion(self):
-        pass
+        speed = int(self.ext_speed.get())/(1.75*1.75)*240
+        code = 'G1 E{} F{}'.format(self.ext_len.get(), int(speed))
+        if DEBUG:
+            print(code)
+        else:
+            self.serial.ser.write(code)
+        time.sleep(1)
+
+    def sendGcode(self):
+        code= self.Gcode.get()
+        if DEBUG:
+            print(code)
+        else:
+            self.serial.ser.write(code)
+        time.sleep(1)
+        self.Gcode.set('')
+        
 
 
         

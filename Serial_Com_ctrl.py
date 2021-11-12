@@ -31,7 +31,7 @@ class SerialCtrl():
             self.ser = serial.Serial()
             self.ser.baudrate = BAUD
             self.ser.port = PORT
-            self.ser.timeout = 1
+            self.ser.timeout = 0.1
         
         try:
             if self.ser.is_open:
@@ -57,8 +57,17 @@ class SerialCtrl():
             self.ser.status = False
         except:
             self.ser.status = False
- 
             
+    def checkSerialPort(self):
+        try:
+            if self.ser.isOpen() and self.ser.in_waiting():
+                recentPacket=self.ser.readline()
+            else:
+                recentPacket=''
+            return recentPacket 
+        except:
+            pass
+                   
         
 if __name__ == '__main__':
     S = SerialCtrl()

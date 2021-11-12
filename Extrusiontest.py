@@ -7,5 +7,7 @@ MySerial = SerialCtrl()
 
 ComMaster = ComGUI(RootMaster.root, MySerial)
 
-RootMaster.root.mainloop()
+while True:
+    RootMaster.root.update()
+    MySerial.checkSerialPort()
             
