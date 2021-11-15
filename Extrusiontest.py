@@ -1,19 +1,12 @@
 
 from Extrusiontest_GUI import RootGUI, ComGUI
 from Serial_Com_ctrl import SerialCtrl
+from Data_com import DataMaster
 
 RootMaster = RootGUI()
+MyData = DataMaster()
 MySerial = SerialCtrl()
 
-ComMaster = ComGUI(RootMaster.root, MySerial)
+ComMaster = ComGUI(RootMaster.root, MySerial, MyData)
 
-
-
-while True:
-    RootMaster.root.update()
-    try:
-        ComMaster.conn.updateLog()
-    except:
-        pass
-    
-            
+RootMaster.root.mainloop()

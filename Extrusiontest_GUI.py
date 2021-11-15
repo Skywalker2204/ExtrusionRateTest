@@ -2,12 +2,14 @@
 import sys
 import glob
 
-
+import threading
 import time
 try:
     import tkinter as tk
 except:
     import Tkinter as tk
+    
+    
 
 DEBUG = True
 
@@ -19,9 +21,11 @@ class RootGUI:
         self.root.config(bg="white")
         
 class ComGUI():
-    def __init__(self,root,serial):
+    def __init__(self,root,serial, data):
         self.root = root
         self.serial = serial
+        self.data = Data
+        
         self.frame = tk.LabelFrame(root, text="COM Manager", padx=5, pady=5, 
                                  bg="white")
         self.label_com = tk.Label(self.frame, 
@@ -55,7 +59,7 @@ class ComGUI():
                "19200", "28800", "38400", "56000", "57600", "115200", 
                "128000", "256000"]
         
-        self.clicked_bd.set(bds[0])
+        self.clicked_bd.set(bds[-1])
         self.drop_baud = tk.OptionMenu(self.frame, self.clicked_bd, *bds, 
                                        command = self.connect_ctrl)
         self.drop_baud.config(width=10)
@@ -90,7 +94,7 @@ class ComGUI():
     
     def serial_connect(self):
         if DEBUG:
-            self.conn = ConnGUI(self.root, self.serial)
+            self.conn = ConnGUI(self.root, self.serial, self.data)
             pass
         
         if self.bnt_connect["text"] in "Connect":
@@ -101,12 +105,19 @@ class ComGUI():
                 self.drop_baud["state"]="disable"
                 self.drop_com["state"]="disable"
                 
-                self.conn = ConnGUI(self.root, self.serial)
+                
+                self.serial.t1 = threading.Thread(
+                    target = self.serial.SerialSync, args=(self, ),
+                    daemon= True)
+                self.serila.t1.start()
+                
+                self.conn = ConnGUI(self.root, self.serial, self.data)
             else:
                 ErrorMsg = f"Failure to establish UART connection using {self.clicked_com.get()}"
                 tk.messagebox.showerror("showerror", ErrorMsg)
                 
         else:
+            self.serial.threading = False
             self.serial.SerialClose()
             self.bnt_connect["text"]="Connect"
             self.bnt_refresh["state"]="active"
@@ -115,9 +126,12 @@ class ComGUI():
         pass
 
 class ConnGUI():
-    def __init__(self, root, serial):
+    def __init__(self, root, serial, data):
         self.root = root
         self.serial = serial
+        self.data=data
+        self.numLog = 0
+        
         
         self.frame = tk.LabelFrame(root, text="Printer Controller", 
                                 padx=5, pady=5, bg='white')
@@ -126,9 +140,8 @@ class ConnGUI():
                                     bg='white', anchor="w", width=15)
         self.label_ext = tk.Label(self.frame, text='Extrusion:', 
                                     bg='white', anchor ="w", width=15)
-        self.istemp = tk.StringVar()
-        self.istemp.set("--")
-        self.label_isttemp = tk.Label(self.frame, text=self.istemp.get(), 
+
+        self.label_isttemp = tk.Label(self.frame, text="--", 
                                     bg='white', fg='red', width=10)
         self.label_ext_len = tk.Label(self.frame, text='Length', 
                                     bg='white', width=10)
@@ -166,10 +179,12 @@ class ConnGUI():
         self.ConnGUIOpen()
         self.setDefalut()
         
+        self.root.after(100, self.updateConnGUI())
         pass
     
+    
     def ConnGUIOpen(self):
-        self.root.geometry('800x240')
+        self.root.geometry('1100x360')
         self.frame.grid(row=0, column=4, rowspan=3, columnspan=5, 
                         padx=5, pady=5)
         
@@ -191,17 +206,18 @@ class ConnGUI():
         self.bnt_temp.grid(row=1, column=3)
         self.bnt_ext.grid(row=3, column=3)
         
-        self.dataCanvas.grid(row=4, column=0, columnspan=7, rowspan=5)
-        self.vsb.grid(row=4, column=8, rowspan=5, sticky='NS')
+        self.dataCanvas.grid(row=4, column=0, columnspan=6, rowspan=5)
+        self.vsb.grid(row=4, column=6, rowspan=5, sticky='ns')
+        
         
     def setDefalut(self):
         self.entry_ext_speed.insert(-1, '20')
         self.entry_ext_len.insert(-1, '100')
         self.entry_temp.insert(-1, '200')
         
-    
+        
     def logWindow(self, root):
-        self.dataCanvas = tk.Canvas(root, width = 800, heigh=60, bg='white')
+        self.dataCanvas = tk.Canvas(root, width = 1000, heigh=120, bg='white')
         self.vsb = tk.Scrollbar(root, orient='vertical', 
                                 command=self.dataCanvas.yview)
         self.dataCanvas.config(yscrollcommand=self.vsb.set)
@@ -209,15 +225,22 @@ class ConnGUI():
         self.dataFrame=tk.Frame(self.dataCanvas, bg='white')
         self.dataCanvas.create_window((10,0), window=self.dataFrame,
                                       anchor='nw')
-    def updateLog(self):
-        text=self.serial.checkSerialPort()
-        tk.Label(self.dataFrame, text=text, font=('Calibri',
-                                                 '13'), bg='white').pack()
         
         
+    def updateConnGUI(self):
+        numLog = len(self.data.msg) 
+        if self.numLog < numLog:
+            for i in range(self.numlog, numLog):
+                text = str(i) + '\t' + self.data.msg[i]
+                tk.Label(self.dataFrame, text=text,
+                         font=('Calibri', '10'), bg='white').pack(side='top')
+                
+            self.dataCanvas.config(scrollregion=self.dataCanvas.bbox('all'))
+            self.numLog=numLog
         
+             
     def SetTemperature(self):
-        code = 'M104 S{}\n'.format(self.temp.get())
+        code = 'M104 S{}\r\n'.format(self.temp.get())
         if DEBUG:
             print(code)
         else:
@@ -230,17 +253,19 @@ class ConnGUI():
         pass
         pass
     
+    
     def Extrusion(self):
         speed = int(self.ext_speed.get())/(1.75*1.75)*240
-        code = 'G1 E{} F{}\n'.format(self.ext_len.get(), int(speed))
+        code = 'G1 E{} F{}\r\n'.format(self.ext_len.get(), int(speed))
         if DEBUG:
             print(code)
         else:
             self.serial.ser.write(bytes(code, 'utf-8'))
         time.sleep(1)
+        
 
     def sendGcode(self):
-        code= self.Gcode.get()+'\n'
+        code= self.Gcode.get()+'\r\n'
         if DEBUG:
             print(code)
         else:
@@ -251,28 +276,7 @@ class ConnGUI():
 
 
         
-        
-        
-"""        
-def get_serial_ports():
-        com_ports=list(ports.comports())
-        return com_ports
-
-def sendGcode(code, ser):
-    for line in code.split('\n'):
-        ser.write(line)
-        time.sleep(1)
-        
-def write_Extrusion_Gcode(length, speed, purge=8):
-    code = 'G1 E{} F1000\n'.format(purge)
-    code += 'G4 S1\n'
-    code += 'G1 E{} F{}\n'.format(length, speed)
-    return code 
-
-def get_Temperature(ser, i=1):
-    sendGcode('M105 S'+str(int(i)), ser)
-
-"""       
+             
 if __name__ == '__main__':
     RootGUI()
     ComGUI()

@@ -60,13 +60,28 @@ class SerialCtrl():
             
     def checkSerialPort(self):
         try:
-            if self.ser.isOpen() and self.ser.in_waiting():
+            if self.ser.isOpen() and self.ser.inWaiting():
                 recentPacket=self.ser.readline()
             else:
                 recentPacket=''
             return recentPacket.decode('utf-8').rstrip('\n') 
         except:
             pass
+        
+    def SerialSync(self, gui):
+        self.threading = True
+        while self.threading:
+            try:
+                gui.data.DecodeMsg()
+                gui.conn.label_isttemp["text"]=gui.data.get('temperature')[-1]
+                if self.threading == False:
+                    break
+            except Exception as e:
+                print(e)
+
+            if self.threading == False:
+                break
+            
                    
         
 if __name__ == '__main__':
