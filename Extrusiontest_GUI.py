@@ -111,7 +111,8 @@ class ComGUI():
                     target = self.serial.SerialSync, args=(self, ),
                     daemon= True)
                 self.serial.t1.start()
-                
+                time.sleep(20) 
+                self.serial.startStream(self.data.startStream)
                 
             else:
                 ErrorMsg = f"Failure to establish UART connection using {self.clicked_com.get()}"
@@ -233,7 +234,7 @@ class ConnGUI():
         text = str(self.numLog) + '\t' + msg
         tk.Label(self.dataFrame, text=text,
                          font=('Calibri', '10'), bg='white',
-                 anchor='w').pack()
+                 anchor='w', justify=tk.LEFT).pack()
                 
         self.dataCanvas.config(scrollregion=self.dataCanvas.bbox('all'))
 
