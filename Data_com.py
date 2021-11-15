@@ -8,16 +8,21 @@ Created on Mon Nov 15 01:04:02 2021
 
 class DataMaster():
     def __init__(self):
+        
         self.startStream = b"M155 S1\r\n"
-        self.msg =[]
-        self.data = {'temperature' : ['--']}
+        self.msg =['']
+        self.dataDict = {'temperature' : ['--']}
+        self.RowMsg = ''
         
     def DecodeMsg(self):
         temp = self.RowMsg
         if len(temp) > 0:
-            if temp.stratswith('T'):
-                self.data['temperature'].append(temp)
+            if temp.startswith(' T:') or temp.startswith('ok T:'):
+                print(temp, 'bin da')
+                T = temp.split(':')[1].split(r'/')[0]
+                self.dataDict['temperature'].append(T)
+                print(T)
             else:
                 self.msg.append(temp)
-        return self.msg[-1]
+        return temp
             

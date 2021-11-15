@@ -11,7 +11,7 @@ except:
     
     
 
-DEBUG = True
+DEBUG = False
 
 class RootGUI:
     def __init__(self):
@@ -24,7 +24,7 @@ class ComGUI():
     def __init__(self,root,serial, data):
         self.root = root
         self.serial = serial
-        self.data = Data
+        self.data = data
         
         self.frame = tk.LabelFrame(root, text="COM Manager", padx=5, pady=5, 
                                  bg="white")
@@ -105,13 +105,14 @@ class ComGUI():
                 self.drop_baud["state"]="disable"
                 self.drop_com["state"]="disable"
                 
+                self.conn = ConnGUI(self.root, self.serial, self.data)
                 
                 self.serial.t1 = threading.Thread(
                     target = self.serial.SerialSync, args=(self, ),
                     daemon= True)
-                self.serila.t1.start()
+                self.serial.t1.start()
                 
-                self.conn = ConnGUI(self.root, self.serial, self.data)
+                
             else:
                 ErrorMsg = f"Failure to establish UART connection using {self.clicked_com.get()}"
                 tk.messagebox.showerror("showerror", ErrorMsg)
@@ -179,7 +180,7 @@ class ConnGUI():
         self.ConnGUIOpen()
         self.setDefalut()
         
-        self.root.after(100, self.updateConnGUI())
+        #self.root.after(1, self.updateConnGUI())
         pass
     
     
@@ -227,30 +228,30 @@ class ConnGUI():
                                       anchor='nw')
         
         
-    def updateConnGUI(self):
-        numLog = len(self.data.msg) 
-        if self.numLog < numLog:
-            for i in range(self.numlog, numLog):
-                text = str(i) + '\t' + self.data.msg[i]
-                tk.Label(self.dataFrame, text=text,
-                         font=('Calibri', '10'), bg='white').pack(side='top')
+    def updateConnGUI(self, msg):
+        self.numLog += 1
+        text = str(self.numLog) + '\t' + msg
+        tk.Label(self.dataFrame, text=text,
+                         font=('Calibri', '10'), bg='white',
+                 anchor='w').pack()
                 
-            self.dataCanvas.config(scrollregion=self.dataCanvas.bbox('all'))
-            self.numLog=numLog
+        self.dataCanvas.config(scrollregion=self.dataCanvas.bbox('all'))
+
         
              
     def SetTemperature(self):
-        code = 'M104 S{}\r\n'.format(self.temp.get())
+    
+        if 'red' in self.bnt_temp['bg']:
+            code = 'M104 S{}\r\n'.format(self.temp.get())
+            self.bnt_temp.configure(bg='green')
+        else:
+            code = 'M104 S0 \r\n'
+            self.bnt_temp.configure(bg='red')
         if DEBUG:
             print(code)
         else:
             self.serial.ser.write(bytes(code, 'utf-8'))
-        time.sleep(1)
-        if 'red' in self.bnt_temp['bg']:
-            self.bnt_temp.configure(bg='green')
-        else:
-            self.bnt_temp.configure(bg='red')
-        pass
+            time.sleep(0.5)
         pass
     
     
