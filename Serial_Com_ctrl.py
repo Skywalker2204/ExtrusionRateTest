@@ -10,6 +10,8 @@ import serial.tools.list_ports as ports
 import serial
 import time
 
+from random import uniform
+
 DEBUG =False
 
 class SerialCtrl():
@@ -89,13 +91,13 @@ class SerialCtrl():
         while self.threading:
             try:
                 gui.data.RowMsg = self.checkSerialPort()
-                msg = gui.data.DecodeMsg()
+                msg = gui.data.DecodeMsg(time.time()-gui.root.startTime)
                 if not self.connected: self.startStream() 
                     
-                gui.conn.label_isttemp["text"]=gui.data.dataDict.get('temperature')[-1]
+                gui.conn.label_isttemp["text"]=gui.data.dataDict.get('temperature')[-1][1]
                 gui.conn.updateConnGUI(msg)
                 
-                gui.data.runScale()
+                gui.data.runScale(time)
                 if self.threading == False:
                     break
             except Exception as e:
@@ -105,6 +107,33 @@ class SerialCtrl():
             if self.threading == False:
                 break
             time.sleep(0.5)
+            
+    def EmulateSerialSync(self, gui):
+        self.threading = True
+        
+        while self.threading:
+            try:
+                gui.data.dataDict['temperature'].append(
+                    [time.time()-gui.root.startTime, uniform(150, 200)])
+                gui.data.dataDict['force'].append(
+                    [time.time()-gui.root.startTime, uniform(5, 15)])
+                msg = 'just a simulation'
+                    
+                gui.conn.label_isttemp["text"]=int(gui.data.dataDict.get(
+                    'temperature')[-1][1])
+                gui.conn.updateConnGUI(msg)
+                
+
+                if self.threading == False:
+                    break
+            except Exception as e:
+                print(e)
+            
+            gui.dis.updateChart()
+            if self.threading == False:
+                break
+            time.sleep(0.5)
+            print(gui.data.dataDict.get('temperature')[-1][0])
             
                    
         

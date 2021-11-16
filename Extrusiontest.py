@@ -12,6 +12,7 @@ ComMaster = ComGUI(RootMaster.root, MySerial, MyData)
 def on_closing():
     MyData.cleanAndExit()
     ComMaster.dis.killChart()
+    MySerial.threading=False
     RootMaster.root.destroy()
 
 RootMaster.root.protocol("WM_DELETE_WINDOW", on_closing)

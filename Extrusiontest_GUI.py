@@ -12,6 +12,7 @@ except:
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
+import numpy as np
 
 DEBUG = True
 
@@ -99,10 +100,14 @@ class ComGUI():
             self.conn = ConnGUI(self.root, self.serial, self.data)
             time.sleep(2)
             self.dis = DisGUI(self.root, self.serial, self.data)
-            self.startTime=time.time()
-            return 
+            self.root.startTime=time.time()
+            
+            self.serial.t0 = threading.Thread(
+                target= self.serial.EmulateSerialSync, args=(self, ), 
+                daemon=True)
+            self.serial.t0.start()
         
-        if self.bnt_connect["text"] in "Connect":
+        elif self.bnt_connect["text"] in "Connect":
             self.serial.SerialOpen(self)
             if self.serial.ser.status:
                 self.bnt_connect["text"]="Disconnect"
@@ -113,7 +118,7 @@ class ComGUI():
                 self.conn = ConnGUI(self.root, self.serial, self.data)
                 time.sleep(10)
                 self.dis = DisGUI(self.root, self.serial, self.data)
-                self.startTime=time.time()
+                self.root.startTime=time.time()
                 self.serial.t1 = threading.Thread(
                     target = self.serial.SerialSync, args=(self, ),
                     daemon= True)
@@ -339,16 +344,14 @@ class DisGUI():
         
     def updateChart(self):
         try:
-            x = self.data.dataDict.get('force')
-            y = time.time()-self.startTime
-            self.fig[1](x, y, color='green', linewidth=1)
-            self.fig[1].gird(color='b', linestyle='-', linewidth=0.2)
+            dat = np.array(self.data.dataDict.get('force'))
+            self.fig[1].plot(dat[:,0], dat[:,1], color='green', linewidth=1)
+            self.fig[1].grid(color='b', linestyle='-', linewidth=0.2)
             self.fig[0].canvas.draw()
         except Exception as e:
-            print('Display dont work due to:' +e)
+            print(f'Display dont work due to: {e}')
         pass
-
-        
+      
              
 if __name__ == '__main__':
     RootGUI()
