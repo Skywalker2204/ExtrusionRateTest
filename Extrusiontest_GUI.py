@@ -10,9 +10,10 @@ except:
     import Tkinter as tk
     
 import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 
-DEBUG = False
+DEBUG = True
 
 class RootGUI:
     def __init__(self):
@@ -67,7 +68,7 @@ class ComGUI():
         
         
     def publish(self):
-        self.frame.grid(row=0, column=0, rowspan=3, columnspan=3, 
+        self.frame.grid(row=0, column=0, rowspan=3, columnspan=2, 
                         padx=5, pady=5)
         self.label_com.grid(column=1, row=2)
         self.label_bd.grid(column=1, row=3)
@@ -96,7 +97,10 @@ class ComGUI():
     def serial_connect(self):
         if DEBUG:
             self.conn = ConnGUI(self.root, self.serial, self.data)
-            pass
+            time.sleep(2)
+            self.dis = DisGUI(self.root, self.serial, self.data)
+            self.startTime=time.time()
+            return 
         
         if self.bnt_connect["text"] in "Connect":
             self.serial.SerialOpen(self)
@@ -108,6 +112,8 @@ class ComGUI():
                 
                 self.conn = ConnGUI(self.root, self.serial, self.data)
                 time.sleep(10)
+                self.dis = DisGUI(self.root, self.serial, self.data)
+                self.startTime=time.time()
                 self.serial.t1 = threading.Thread(
                     target = self.serial.SerialSync, args=(self, ),
                     daemon= True)
@@ -136,6 +142,9 @@ class ConnGUI():
         
         self.frame = tk.LabelFrame(root, text="Printer Controller", 
                                 padx=5, pady=5, bg='white')
+        
+        self.scaleFrame = tk.LabelFrame(root, text="Scale Control", 
+                                        padx=5, pady=5, bg='white')
         
         self.label_temp = tk.Label(self.frame, text='Temperature:', 
                                     bg='white', anchor="w", width=15)
@@ -175,6 +184,12 @@ class ConnGUI():
         self.bnt_Gcode = tk.Button(self.frame, text="Send", 
                                      width=2, command=self.sendGcode)
         
+        self.bnt_tare = tk.Button(self.scaleFrame, text="Tare", width=3, 
+                                  command=self.tare)
+        self.bnt_calibrateScale = tk.Button(self.scaleFrame,
+                                            text="Calibration", width=8, 
+                                  command=self.setReferenceValue)
+        
         self.logWindow(root)
         
         self.ConnGUIOpen()
@@ -185,9 +200,9 @@ class ConnGUI():
     
     
     def ConnGUIOpen(self):
-        self.root.geometry('1100x360')
-        self.frame.grid(row=0, column=4, rowspan=3, columnspan=5, 
-                        padx=5, pady=5)
+        self.root.geometry('1025x280')
+        self.frame.grid(row=0, column=2, rowspan=3, columnspan=3, 
+                        padx=2, pady=2)
         
         self.label_Gcode.grid(row=0, column=0)
         self.entry_Gcode.grid(row=0, column=1, columnspan=2)
@@ -207,8 +222,15 @@ class ConnGUI():
         self.bnt_temp.grid(row=1, column=3)
         self.bnt_ext.grid(row=3, column=3)
         
-        self.dataCanvas.grid(row=5, column=0, columnspan=6, rowspan=5)
+        self.dataCanvas.grid(row=5, column=0, columnspan=6, rowspan=5, 
+                             padx=5)
         self.vsb.grid(row=5, column=6, rowspan=5, sticky='ns')
+        
+        self.scaleFrame.grid(row=0, column=5, rowspan=3,
+                             columnspan=2, padx=2, pady=2)
+        
+        self.bnt_tare.grid(row=0, column=0)
+        self.bnt_calibrateScale.grid(row=1, column=0)
         
         
     def setDefalut(self):
@@ -229,22 +251,19 @@ class ConnGUI():
         
         
     def updateConnGUI(self, msg):
-        if msg='': break
-        self.numLog += 1
-        textList = msg.split(':')
-        textList.insert(0,str(self.numLog))
-        for i,t in enumerate(textList):
-            tk.Label(self.dataFrame, text=t),
-                     font=('Calibri', '10'), bg='white',
-                     anchor='w', justify=tk.LEFT).grid(
-                         row=self.numLog, column=i)
+        if msg!='':
+            self.numLog += 1
+            textList = msg.split(':')
+            textList.insert(0,str(self.numLog))
+            for i,t in enumerate(textList):
+                tk.Label(self.dataFrame, text=t, font=('Calibri', '10'),
+                     bg='white', anchor='w', justify=tk.LEFT).grid(
+                row=self.numLog, column=i)
                 
-        self.dataCanvas.config(scrollregion=self.dataCanvas.bbox('all'))
+            self.dataCanvas.config(scrollregion=self.dataCanvas.bbox('all'))
 
-        
-             
-    def SetTemperature(self):
-    
+
+    def SetTemperature(self):    
         if 'red' in self.bnt_temp['bg']:
             code = 'M104 S{}\r\n'.format(self.temp.get())
             self.bnt_temp.configure(bg='green')
@@ -278,7 +297,23 @@ class ConnGUI():
         time.sleep(1)
         self.Gcode.set('')
         
-def DisGUI():
+    def tare(self):
+        if DEBUG:
+            print('TARE!')
+        else:
+            self.data.hx.tare()
+        pass
+    
+    def setReferenceValue(self):
+        refValue = int(input('Enter reference Value:'))
+        if DEBUG:
+            print(f'The reference value is set to {refValue}')
+        else:
+            self.data.setReferenceValue(refValue)
+        pass
+        
+        
+class DisGUI():
     def __init__(self, root, serial, data):
         self.root = root
         self.serial = serial
@@ -287,10 +322,30 @@ def DisGUI():
         self.disFrame = tk.LabelFrame(self.root, text="Display Frame", padx=5, pady=5,
                                       bg='white')
         self.disFrame.grid(padx=5, column=0, row=4, columnspan=7, sticky='nw')
-        self.root.geometry('1050x550')
+        self.root.geometry('1025x725')
+        self.AddChart()
 
     def AddChart(self):
-        self.fig = plt.Figures(figsize=(7,5), dpi=80)
+        self.fig = []
+        self.fig.append(plt.Figure(figsize=(11,5), dpi=80))
+        self.fig.append(self.fig[-1].add_subplot(111))
+        self.fig.append(FigureCanvasTkAgg(self.fig[0], 
+                                          master= self.disFrame))
+        self.fig[-1].get_tk_widget().grid(column=0, row=0, sticky='n')
+        pass
+    
+    def killChart(self):
+        self.fig.pop()
+        
+    def updateChart(self):
+        try:
+            x = self.data.dataDict.get('force')
+            y = time.time()-self.startTime
+            self.fig[1](x, y, color='green', linewidth=1)
+            self.fig[1].gird(color='b', linestyle='-', linewidth=0.2)
+            self.fig[0].canvas.draw()
+        except Exception as e:
+            print('Display dont work due to:' +e)
         pass
 
         
@@ -299,5 +354,6 @@ if __name__ == '__main__':
     RootGUI()
     ComGUI()
     ConnGUI()
+    DisGUI()
         
           

@@ -5,9 +5,10 @@ Created on Mon Nov 15 01:04:02 2021
 
 @author: lukashentschel
 """
-
-from hx711 import HX711
-import RPi.GPIO as GPIO
+DEBUG = True
+if not DEBUG:
+    from hx711 import HX711
+    import RPi.GPIO as GPIO
 
 class DataMaster():
     def __init__(self):
@@ -56,8 +57,10 @@ class DataMaster():
             print("Scale Error: "+e)
 
     def cleanAndExit(self):
+        if not DEBUG:
+            GPIO.cleanup()
         print('GPIO cleanup performed')
-        GPIO.cleanup()
+        
         
         
             

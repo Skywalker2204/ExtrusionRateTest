@@ -100,7 +100,8 @@ class SerialCtrl():
                     break
             except Exception as e:
                 print(e)
-
+            
+            gui.dis.updateChart()
             if self.threading == False:
                 break
             time.sleep(0.5)
