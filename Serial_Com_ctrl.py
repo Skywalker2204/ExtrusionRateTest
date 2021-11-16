@@ -16,6 +16,7 @@ class SerialCtrl():
     def __init__(self):
         self.com_list=[]
         self.connected = False
+        self.startCode = b"M155 S1\r\n"
         
     def getCOMList(self):
         self.com_list=[i.device for i in list(ports.comports())]
@@ -70,16 +71,17 @@ class SerialCtrl():
         except:
             pass
         
-    def startStream(self, code):
-        while not self.connected:
-            try:
-                self.ser.write(code)
-                time.sleep(1)
-                if self.checkSerialPort().startswith('ok'):
-                    self.connected = True
-            except Exception as e:
-                print("Starting issues: "+e)
-                
+    def startStream(self):
+        try:
+            self.ser.write(self.startCode)
+            time.sleep(0.2)
+            if self.checkSerialPort().startswith('ok'):
+                self.connected=True
+                print('Tempearture Stream started')
+        except Exception as e:
+            print("Starting issues: "+e)
+            self.connected = False
+            
         
     def SerialSync(self, gui):
         self.threading = True
@@ -88,6 +90,8 @@ class SerialCtrl():
             try:
                 gui.data.RowMsg = self.checkSerialPort()
                 msg = gui.data.DecodeMsg()
+                if not self.connected: self.startStream() 
+                    
                 gui.conn.label_isttemp["text"]=gui.data.dataDict.get('temperature')[-1]
                 gui.conn.updateConnGUI(msg)
                 

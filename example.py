@@ -21,8 +21,9 @@ def cleanAndExit():
         
     print("Bye!")
     sys.exit()
-
+#cleanAndExit()
 hx = HX711(5, 6)
+print('hey')
 
 # I've found out that, for some reason, the order of the bytes is not always the same between versions of python, numpy and the hx711 itself.
 # Still need to figure out why does it change.

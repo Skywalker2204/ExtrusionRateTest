@@ -9,7 +9,8 @@ try:
 except:
     import Tkinter as tk
     
-    
+import matplotlib.pyplot as plt
+
 
 DEBUG = False
 
@@ -106,13 +107,11 @@ class ComGUI():
                 self.drop_com["state"]="disable"
                 
                 self.conn = ConnGUI(self.root, self.serial, self.data)
-                
+                time.sleep(10)
                 self.serial.t1 = threading.Thread(
                     target = self.serial.SerialSync, args=(self, ),
                     daemon= True)
                 self.serial.t1.start()
-                time.sleep(20) 
-                self.serial.startStream(self.data.startStream)
                 
             else:
                 ErrorMsg = f"Failure to establish UART connection using {self.clicked_com.get()}"
@@ -208,8 +207,8 @@ class ConnGUI():
         self.bnt_temp.grid(row=1, column=3)
         self.bnt_ext.grid(row=3, column=3)
         
-        self.dataCanvas.grid(row=4, column=0, columnspan=6, rowspan=5)
-        self.vsb.grid(row=4, column=6, rowspan=5, sticky='ns')
+        self.dataCanvas.grid(row=5, column=0, columnspan=6, rowspan=5)
+        self.vsb.grid(row=5, column=6, rowspan=5, sticky='ns')
         
         
     def setDefalut(self):
@@ -230,11 +229,15 @@ class ConnGUI():
         
         
     def updateConnGUI(self, msg):
+        if msg='': break
         self.numLog += 1
-        text = str(self.numLog) + '\t' + msg
-        tk.Label(self.dataFrame, text=text,
-                         font=('Calibri', '10'), bg='white',
-                 anchor='w', justify=tk.LEFT).pack()
+        textList = msg.split(':')
+        textList.insert(0,str(self.numLog))
+        for i,t in enumerate(textList):
+            tk.Label(self.dataFrame, text=t),
+                     font=('Calibri', '10'), bg='white',
+                     anchor='w', justify=tk.LEFT).grid(
+                         row=self.numLog, column=i)
                 
         self.dataCanvas.config(scrollregion=self.dataCanvas.bbox('all'))
 
@@ -275,7 +278,20 @@ class ConnGUI():
         time.sleep(1)
         self.Gcode.set('')
         
+def DisGUI():
+    def __init__(self, root, serial, data):
+        self.root = root
+        self.serial = serial
+        self.data = data
 
+        self.disFrame = tk.LabelFrame(self.root, text="Display Frame", padx=5, pady=5,
+                                      bg='white')
+        self.disFrame.grid(padx=5, column=0, row=4, columnspan=7, sticky='nw')
+        self.root.geometry('1050x550')
+
+    def AddChart(self):
+        self.fig = plt.Figures(figsize=(7,5), dpi=80)
+        pass
 
         
              

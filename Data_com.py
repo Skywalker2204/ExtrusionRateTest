@@ -12,9 +12,8 @@ import RPi.GPIO as GPIO
 class DataMaster():
     def __init__(self):
         
-        self.startStream = b"M155 S1\r\n"
-        self.msg =['']
-        self.dataDict = {'temperature' : ['--']}
+        self.dataDict = {'temperature' : [0.0],
+                         'force' : [0.0]}
         self.RowMsg = ''
         
         self.referenceUnit=92
@@ -23,15 +22,15 @@ class DataMaster():
         
     def DecodeMsg(self):
         temp = self.RowMsg
+        msg = ''
         if len(temp) > 0:
             if temp.startswith(' T:') or temp.startswith('ok T:'):
-                print(temp, 'bin da')
                 T = temp.split(':')[1].split(r'/')[0]
                 self.dataDict['temperature'].append(T)
                 print(T)
             else:
-                self.msg.append(temp)
-        return temp
+                msg = temp
+        return msg
     
     def initScale(self):
         if not self.scaleInit:
@@ -51,9 +50,14 @@ class DataMaster():
     def runScale(self):
         try:
             value = self.hx.get_weight(self.PINS[0])
-            self.dataDict['Force'].append(value)
+            self.dataDict['force'].append(value)
             print(value)
         except Exception as e:
             print("Scale Error: "+e)
+
+    def cleanAndExit(self):
+        print('GPIO cleanup performed')
+        GPIO.cleanup()
+        
         
             

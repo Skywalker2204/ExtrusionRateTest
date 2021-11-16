@@ -16,7 +16,7 @@ class HX711:
         # Mutex for reading from the HX711, in case multiple threads in client
         # software try to access get values from the class at the same time.
         self.readLock = threading.Lock()
-        
+        #GPIO.setwarnings(False)
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(self.PD_SCK, GPIO.OUT)
         GPIO.setup(self.DOUT, GPIO.IN)
@@ -38,9 +38,10 @@ class HX711:
         self.bit_format = 'MSB'
 
         self.set_gain(gain)
-
+        
         # Think about whether this is necessary.
         time.sleep(1)
+        
 
         
     def convertFromTwosComplement24bit(self, inputValue):
@@ -52,15 +53,15 @@ class HX711:
 
     
     def set_gain(self, gain):
-        if gain is 128:
+        if gain == 128:
             self.GAIN = 1
-        elif gain is 64:
+        elif gain == 64:
             self.GAIN = 3
-        elif gain is 32:
+        elif gain == 32:
             self.GAIN = 2
 
         GPIO.output(self.PD_SCK, False)
-
+        
         # Read out a set of raw bytes and throw it away.
         self.readRawBytes()
 
@@ -114,7 +115,7 @@ class HX711:
         # Wait until HX711 is ready for us to read a sample.
         while not self.is_ready():
            pass
-
+        
         # Read three bytes of data from the HX711.
         firstByte  = self.readNextByte()
         secondByte = self.readNextByte()

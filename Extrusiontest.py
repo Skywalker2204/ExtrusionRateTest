@@ -9,4 +9,9 @@ MySerial = SerialCtrl()
 
 ComMaster = ComGUI(RootMaster.root, MySerial, MyData)
 
+def on_closing():
+    MyData.cleanAndExit()
+    RootMaster.root.destroy()
+
+RootMaster.root.protocol("WM_DELETE_WINDOW", on_closing)
 RootMaster.root.mainloop()
