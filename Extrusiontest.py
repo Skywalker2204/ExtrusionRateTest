@@ -6,8 +6,9 @@ from Data_com import DataMaster
 RootMaster = RootGUI()
 MyData = DataMaster()
 MySerial = SerialCtrl()
+MySerial2 = SerialCtrl()
 
-ComMaster = ComGUI(RootMaster.root, MySerial, MyData)
+ComMaster = ComGUI(RootMaster.root, MySerial, MySerial2, MyData)
 
 def on_closing():
     MyData.cleanAndExit()

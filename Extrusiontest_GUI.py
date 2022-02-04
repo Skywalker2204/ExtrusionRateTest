@@ -20,68 +20,102 @@ class RootGUI:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("Printer Communication")
-        self.root.geometry("420x120")
+        self.root.geometry("1025x725")
         self.root.config(bg="white")
         
+        
 class ComGUI():
-    def __init__(self,root,serial, data):
+    def __init__(self,root,serial, serial2, data):
         self.root = root
         self.serial = serial
+        self.serial2 = serial2 #for the secound serial port from the printer
         self.data = data
         
-        self.frame = tk.LabelFrame(root, text="COM Manager", padx=5, pady=5, 
+        self._init_Frame()
+        
+        self.conn = ConnGUI(self.root, self.serial, self.data)
+        time.sleep(2)
+        self.dis = DisGUI(self.root, self.serial, self.data)
+        
+    def _init_Frame(self):
+        
+        #for the printer communication
+        self.frame = tk.LabelFrame(self.root, text="COM Manager", padx=5, pady=5, 
                                  bg="white")
+        self.label_printer= tk.Label(self.frame, text="Printer COM",bg="white",
+                                 width=15, anchor="w")
         self.label_com = tk.Label(self.frame, 
                                text="Avaliable Ports:", bg="white", width=15, 
                                anchor="w")
         self.label_bd = tk.Label(self.frame, 
                                text="Baude Rate:", bg="white", width=15, 
                                anchor="w")
-        self.ComOptions()
-        self.BaudOptions()
+        self.clicked_com, self.drop_com = self.ComOptions(self.serial,
+                                                          self.frame)
+        self.clicked_bd, self.drop_baud = self.BaudOptions(self.frame)
+        
+        #For the scale communiciaton 
+        self.label_scale = tk.Label(self.frame, text="Scale COM",bg="white",
+                                 width=15, anchor="w")
+        self.clicked_scale_com, self.drop_scale_com = self.ComOptions(self.serial,
+                                                          self.frame)
+        self.clicked_scale_bd, self.drop_scale_baud = self.BaudOptions(self.frame, 
+                                                                     default=6)
         
         self.bnt_refresh = tk.Button(self.frame, text="Refresh", width=10, 
                                      command=self.com_refresh)
         self.bnt_connect = tk.Button(self.frame, text="Connect", 
                                      width=10, state="disable", 
-                                     command=self.serial_connect)
+                                     command=self.serial_connect) 
         self.publish()
         
-    def ComOptions(self):
+    def ComOptions(self, serial, frame):
         com_ports=self.serial.getCOMList()
-        self.clicked_com = tk.StringVar()
-        self.clicked_com.set(com_ports[0])
-        self.drop_com = tk.OptionMenu(self.frame, self.clicked_com, *com_ports, 
+        clicked = tk.StringVar()
+        clicked.set(com_ports[0])
+        drop = tk.OptionMenu(frame, clicked, *com_ports, 
                                       command=self.connect_ctrl)
-        self.drop_com.config(width=10)
+        drop.config(width=10)
+        return clicked, drop
         
-    def BaudOptions(self):
         
-        self.clicked_bd = tk.StringVar()
+    def BaudOptions(self, frame, default=-1):
+        
+        clicked = tk.StringVar()
         bds = ["-", "300", "600", "1200", "2400", "4800", "9600", "14400", 
                "19200", "28800", "38400", "56000", "57600", "115200", 
                "128000", "256000"]
-        
-        self.clicked_bd.set(bds[-1])
-        self.drop_baud = tk.OptionMenu(self.frame, self.clicked_bd, *bds, 
+        clicked.set(bds[default])
+        drop = tk.OptionMenu(frame, clicked, *bds, 
                                        command = self.connect_ctrl)
-        self.drop_baud.config(width=10)
+        drop.config(width=10)
+        return clicked, drop
         
         
     def publish(self):
-        self.frame.grid(row=0, column=0, rowspan=3, columnspan=2, 
+        self.frame.grid(row=0, column=0, rowspan=3, columnspan=3, 
                         padx=5, pady=5)
-        self.label_com.grid(column=1, row=2)
-        self.label_bd.grid(column=1, row=3)
         
-        self.drop_com.grid(column=2, row=2)
-        self.drop_baud.grid(column=2, row=3)
+        self.label_printer.grid(column=1, row=0)
+        self.label_scale.grid(column=2, row=0)
         
-        self.bnt_refresh.grid(column=3, row =2)
-        self.bnt_connect.grid(column=3, row =3)
+        self.label_com.grid(column=0, row=1)
+        self.label_bd.grid(column=0, row=2)
+        
+        self.drop_com.grid(column=1, row=1)
+        self.drop_baud.grid(column=1, row=2)
+        
+        self.drop_scale_com.grid(column=2, row=1)
+        self.drop_scale_baud.grid(column=2, row=2)
+        
+        self.bnt_refresh.grid(column=3, row =1)
+        self.bnt_connect.grid(column=3, row =2)
+        
         
     def connect_ctrl(self, widget):
-        if '-' in self.clicked_com.get() or "-" in self.clicked_bd.get():
+        check = [self.clicked_com.get(), self.clicked_bd.get(), 
+                 self.clicked_scale_com.get(), self.clicked_scale_bd.get()]
+        if '-' in check:
             state = "disable"
         else:
             state = "active"
@@ -89,17 +123,16 @@ class ComGUI():
         self.bnt_connect["state"] = state
         pass
     
+    
     def com_refresh(self):
         self.drop_com.destroy()
         self.ComOptions()
         self.drop_com.grid(column=2, row=2)
         self.connect_ctrl([])
+        
     
     def serial_connect(self):
         if DEBUG:
-            self.conn = ConnGUI(self.root, self.serial, self.data)
-            time.sleep(2)
-            self.dis = DisGUI(self.root, self.serial, self.data)
             self.root.startTime=time.time()
             
             self.serial.t0 = threading.Thread(
@@ -108,20 +141,26 @@ class ComGUI():
             self.serial.t0.start()
         
         elif self.bnt_connect["text"] in "Connect":
-            self.serial.SerialOpen(self)
-            if self.serial.ser.status:
+            self.serial.SerialOpen(self.clicked_com, self.clicked_bd)
+            self.serial2.SerialOpen(self.clicked_scale_com,
+                                    self.clicked_scale_bd)
+            if self.serial.ser.status and self.serial2.ser.status:
                 self.bnt_connect["text"]="Disconnect"
                 self.bnt_refresh["state"]="disable"
                 self.drop_baud["state"]="disable"
                 self.drop_com["state"]="disable"
+                self.drop_scale_baud["state"]="disable"
+                self.drop_scale_com["state"]="disable"
                 
-                self.conn = ConnGUI(self.root, self.serial, self.data)
-                time.sleep(10)
-                self.dis = DisGUI(self.root, self.serial, self.data)
+                
                 self.root.startTime=time.time()
-                self.serial.t1 = threading.Thread(
-                    target = self.serial.SerialSync, args=(self, ),
+                self.serial.t0 = threading.Thread(
+                    target = self.serial.SerialSyncPrinter, args=(self, ),
                     daemon= True)
+                self.serial.t1 = threading.Thread(
+                    target = self.serial.SerialSyncScale, args=(self, ),
+                    daemon= True)
+                self.serial.t0.start()
                 self.serial.t1.start()
                 
             else:
@@ -136,6 +175,7 @@ class ComGUI():
             self.drop_baud["state"]="active"
             self.drop_com["state"]="active"
         pass
+    
 
 class ConnGUI():
     def __init__(self, root, serial, data):
@@ -194,9 +234,7 @@ class ConnGUI():
         self.bnt_calibrateScale = tk.Button(self.scaleFrame,
                                             text="Calibration", width=8, 
                                   command=self.setReferenceValue)
-        
         self.logWindow(root)
-        
         self.ConnGUIOpen()
         self.setDefalut()
         
@@ -205,8 +243,7 @@ class ConnGUI():
     
     
     def ConnGUIOpen(self):
-        self.root.geometry('1025x280')
-        self.frame.grid(row=0, column=2, rowspan=3, columnspan=3, 
+        self.frame.grid(row=0, column=3, rowspan=3, columnspan=3, 
                         padx=2, pady=2)
         
         self.label_Gcode.grid(row=0, column=0)
@@ -229,9 +266,9 @@ class ConnGUI():
         
         self.dataCanvas.grid(row=5, column=0, columnspan=6, rowspan=5, 
                              padx=5)
-        self.vsb.grid(row=5, column=6, rowspan=5, sticky='ns')
+        self.vsb.grid(row=5, column=7, rowspan=5, sticky='ns')
         
-        self.scaleFrame.grid(row=0, column=5, rowspan=3,
+        self.scaleFrame.grid(row=0, column=6, rowspan=3,
                              columnspan=2, padx=2, pady=2)
         
         self.bnt_tare.grid(row=0, column=0)
@@ -326,8 +363,7 @@ class DisGUI():
 
         self.disFrame = tk.LabelFrame(self.root, text="Display Frame", padx=5, pady=5,
                                       bg='white')
-        self.disFrame.grid(padx=5, column=0, row=4, columnspan=7, sticky='nw')
-        self.root.geometry('1025x725')
+        self.disFrame.grid(padx=5, column=0, row=3, columnspan=8, sticky='nw')
         self.AddChart()
 
     def AddChart(self):

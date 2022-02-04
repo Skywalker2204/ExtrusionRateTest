@@ -15,16 +15,30 @@ class DataMaster():
         
         self.dataDict = {'temperature' : [[0.0, 0.0]],
                          'force' : [[0.0, 0.0]]}
-        self.RowMsg = ''
+        self.RowMsgPrinter = ''
+        self.RowMsgScale = ''
         
         self.referenceUnit=92
         self.scaleInit = False
         self.PINS = [5,6] #DT und SCK in GIPO PIN
         
-    def DecodeMsg(self, time):
-        temp = self.RowMsg
+    def DecodeMsgPrinter(self, time):
+        temp = self.RowMsgPrinter
         msg = ''
         if len(temp) > 0:
+            if temp.startswith(' T:') or temp.startswith('ok T:'):
+                T = temp.split(':')[1].split(r'/')[0]
+                self.dataDict['temperature'].append([time, T])
+                print(T)
+            else:
+                msg = temp
+        return msg
+    
+    def DecodeMsgScale(self, time):
+        temp = self.RowMsgScale
+        msg = ''
+        if len(temp) > 0:
+            print(temp)
             if temp.startswith(' T:') or temp.startswith('ok T:'):
                 T = temp.split(':')[1].split(r'/')[0]
                 self.dataDict['temperature'].append([time, T])
