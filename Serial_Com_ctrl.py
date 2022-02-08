@@ -17,7 +17,7 @@ except:
 
 from random import uniform
 
-DEBUG =False
+DEBUG =True
 
 class SerialCtrl():
     def __init__(self):
@@ -133,32 +133,90 @@ class SerialCtrl():
         
     
     def init_scale(self):
-        self.serial.ser.wirte('t')
-        load = self.popupmsg('Enter the loaded weigth', 'Scale Calibration')
-        self.serial.ser.write(load)
+
+        self.popupmsg('Scale Calibration', self)
+
         
         
-    def popupmsg(self, msg, title):
-        root = tk.Tk()
-        root.title(title)
-        load = tk.StringVar()
+    def popupmsg(self, title, serial):
+        class popup():
+            def __init__(self, title, serial, wait=1000):
+                self.root = tk.Tk()
+                self.serial=serial
+                
+                self._init_window(title)
+                self._numLog=0
+                
+                
+            def _init_window(self, title):
+                self.root.title(title)
+                self.dataCanvas = tk.Canvas(self.root, width = 600,
+                                            heigh=120, bg='white')
+                self.vsb = tk.Scrollbar(self.root, orient='vertical', 
+                                command=self.dataCanvas.yview)
+                self.dataCanvas.config(yscrollcommand=self.vsb.set)
         
-        label = tk.Label(root, text=msg)
-        entry = tk.Entry(root, textvariable=load, bd=1, width= 5)
-        B1 = tk.Button(root, text="Okay", command = root.destroy)
+                self.dataFrame=tk.Frame(self.dataCanvas, bg='white')
+                self.dataCanvas.create_window((10,0), window=self.dataFrame,
+                                      anchor='nw')
         
-        label.pack(side="top", fill="x", pady=10)
-        entry.pack()
-        B1.pack()
+                self.entry = tk.Entry(self.root, bd=1, width= 50)
+                self.B1 = tk.Button(self.root, text="Send", 
+                                    command = self.send_command)
+                self.B2 = tk.Button(self.root, text="Update Log", 
+                                    command = self.updateLog)
         
-        root.mainloop()
-        return load.get()
-        
-        
+                self.entry.grid(row=0, column=0)
+                self.B1.grid(row=0, column=1)
+                self.B2.grid(row=0, column=2, columnspan = 2)
+                self.dataCanvas.grid(row=1, column=0, columnspan=3)
+                self.vsb.grid(row = 1, column=3)
+
+            def send_command(self):
+                entry = self.entry.get()
+                
+                print(entry)
+                if entry != '':
+                    self.writeLog('Send: ' + entry)
+                    if not DEBUG:
+                        self.serial.ser.write(bytes(entry, 'utf-8'))
+                else:
+                    self.writeLog('Unkown command: ' + entry)
+                self.entry.delete(0,tk.END)
+                
+            def writeLog(self,msg):
+                text = str(self._numLog)
+                tk.Label(self.dataFrame, text=text+msg, bg='white').pack()
+                self._numLog +=1
+                
+            def updateLog(self, wait=100):
+                if DEBUG:
+                    msg = 'this is a simulation!'
+                    if self._numLog > 100:
+                        msg='End calibration:'
+                else:
+                    msg = self.checkSerialPort()
+                    
+                self.writeLog(msg)
+                
+                self.root.after(wait, self.updateLog)
+                
+                reg =self.dataCanvas.bbox('all')
+                self.dataCanvas.config(scrollregion=reg)
+                self.dataCanvas.yview(tk.MOVETO, 1)
+                
+                if msg.find("End calibration") != -1:
+                    self.root.destroy()
+
+        popup=popup(title, serial)
+        popup.root.after(100, popup.updateLog)
+        popup.root.mainloop()
+   
         
     def EmulateSerialSync(self, gui):
+        
+        self.popupmsg('Scale Calibration', self)
         self.threading = True
-        print(self.popupmsg('Enter the loaded weigth', 'Scale Calibration'))
         while self.threading:
             try:
                 gui.data.dataDict['temperature'].append(

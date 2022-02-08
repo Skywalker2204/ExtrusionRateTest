@@ -20,7 +20,7 @@ class RootGUI:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("Printer Communication")
-        self.root.geometry("1025x725")
+        self.root.geometry("1025x850")
         self.root.config(bg="white")
         
         
@@ -33,7 +33,7 @@ class ComGUI():
         
         self._init_Frame()
         
-        self.conn = ConnGUI(self.root, self.serial, self.data)
+        self.conn = ConnGUI(self.root, self.serial, self.serial2, self.data)
         time.sleep(2)
         self.dis = DisGUI(self.root, self.serial, self.data)
         
@@ -50,17 +50,16 @@ class ComGUI():
         self.label_bd = tk.Label(self.frame, 
                                text="Baude Rate:", bg="white", width=15, 
                                anchor="w")
-        self.clicked_com, self.drop_com = self.ComOptions(self.serial,
-                                                          self.frame)
-        self.clicked_bd, self.drop_baud = self.BaudOptions(self.frame)
+        self.clicked_com, self.drop_com = self.ComOptions(self.serial)
+        self.clicked_bd, self.drop_baud = self.BaudOptions()
         
         #For the scale communiciaton 
         self.label_scale = tk.Label(self.frame, text="Scale COM",bg="white",
                                  width=15, anchor="w")
-        self.clicked_scale_com, self.drop_scale_com = self.ComOptions(self.serial,
-                                                          self.frame)
-        self.clicked_scale_bd, self.drop_scale_baud = self.BaudOptions(self.frame, 
-                                                                     default=6)
+        self.clicked_scale_com, self.drop_scale_com = self.ComOptions(
+            self.serial2)
+        self.clicked_scale_bd, self.drop_scale_baud = self.BaudOptions(
+            default=6)
         
         self.bnt_refresh = tk.Button(self.frame, text="Refresh", width=10, 
                                      command=self.com_refresh)
@@ -69,24 +68,24 @@ class ComGUI():
                                      command=self.serial_connect) 
         self.publish()
         
-    def ComOptions(self, serial, frame):
+    def ComOptions(self, serial, clicked=False):
         com_ports=self.serial.getCOMList()
-        clicked = tk.StringVar()
+        if not clicked: clicked=tk.StringVar()
         clicked.set(com_ports[0])
-        drop = tk.OptionMenu(frame, clicked, *com_ports, 
+        drop = tk.OptionMenu(self.frame, clicked, *com_ports, 
                                       command=self.connect_ctrl)
         drop.config(width=10)
         return clicked, drop
         
         
-    def BaudOptions(self, frame, default=-1):
+    def BaudOptions(self, clicked=False, default=-1):
         
-        clicked = tk.StringVar()
+        if not clicked: clicked=tk.StringVar()
         bds = ["-", "300", "600", "1200", "2400", "4800", "9600", "14400", 
                "19200", "28800", "38400", "56000", "57600", "115200", 
                "128000", "256000"]
         clicked.set(bds[default])
-        drop = tk.OptionMenu(frame, clicked, *bds, 
+        drop = tk.OptionMenu(self.frame, clicked, *bds, 
                                        command = self.connect_ctrl)
         drop.config(width=10)
         return clicked, drop
@@ -126,8 +125,12 @@ class ComGUI():
     
     def com_refresh(self):
         self.drop_com.destroy()
-        self.ComOptions()
-        self.drop_com.grid(column=2, row=2)
+        self.drop_scale_com.destroy()
+        _, self.drop_com=self.ComOptions(self.serial, clicked=self.clicked_com)
+        _, self.drop_scale_com=self.ComOptions(self.serial2,
+                                               clicked=self.clicked_scale_com)
+        self.drop_com.grid(column=1, row=1)
+        self.drop_scale_com.grid(column=2, row=1)
         self.connect_ctrl([])
         
     
@@ -178,9 +181,10 @@ class ComGUI():
     
 
 class ConnGUI():
-    def __init__(self, root, serial, data):
+    def __init__(self, root, serial, serial2, data):
         self.root = root
         self.serial = serial
+        self.serial2 = serial2
         self.data=data
         self.numLog = 0
         
@@ -264,11 +268,10 @@ class ConnGUI():
         self.bnt_temp.grid(row=1, column=3)
         self.bnt_ext.grid(row=3, column=3)
         
-        self.dataCanvas.grid(row=5, column=0, columnspan=6, rowspan=5, 
-                             padx=5)
-        self.vsb.grid(row=5, column=7, rowspan=5, sticky='ns')
+        self.dataCanvas.grid(row=5, column=0, columnspan=8, padx=5)
+        self.vsb.grid(row=5, column=8, rowspan=5, sticky='ns')
         
-        self.scaleFrame.grid(row=0, column=6, rowspan=3,
+        self.scaleFrame.grid(row=0, column=7, rowspan=3,
                              columnspan=2, padx=2, pady=2)
         
         self.bnt_tare.grid(row=0, column=0)
@@ -343,15 +346,14 @@ class ConnGUI():
         if DEBUG:
             print('TARE!')
         else:
-            self.data.hx.tare()
+            self.serial2.ser.write('t')
         pass
     
     def setReferenceValue(self):
-        refValue = int(input('Enter reference Value:'))
         if DEBUG:
-            print(f'The reference value is set to {refValue}')
+            print('Calibration!')
         else:
-            self.data.setReferenceValue(refValue)
+            self.serial2.ser.write('c')
         pass
         
         
@@ -368,7 +370,7 @@ class DisGUI():
 
     def AddChart(self):
         self.fig = []
-        self.fig.append(plt.Figure(figsize=(11,5), dpi=80))
+        self.fig.append(plt.Figure(figsize=(12,6), dpi=80))
         self.fig.append(self.fig[-1].add_subplot(111))
         self.fig.append(FigureCanvasTkAgg(self.fig[0], 
                                           master= self.disFrame))
